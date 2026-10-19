@@ -1,0 +1,123 @@
+"""Unit tests for CodeLab sandboxed code execution and challenge validation."""
+
+import pytest
+from bot.codelab.sandbox import run_student_code, check_code_safety
+from bot.codelab.challenges import (
+    get_all_challenges,
+    get_challenge,
+    get_next_challenge_id,
+    get_total_challenges_count,
+)
+from bot.database import Database
+
+
+def test_sandbox_executes_valid_code() -> None:
+    """Verify standard valid Python code runs and returns stdout."""
+    res = run_student_code('print("Hello, CodeBuddy!")')
+    assert res.success is True
+    assert res.output.strip() == "Hello, CodeBuddy!"
+    assert res.error_message is None
+
+
+def test_sandbox_executes_math_and_variables() -> None:
+    """Verify variables and calculations run properly."""
+    code = (
+        "x = 25\n"
+        "y = 4\n"
+        "print(x * y)"
+    )
+    res = run_student_code(code)
+    assert res.success is True
+    assert res.output.strip() == "100"
+
+
+def test_sandbox_executes_loop() -> None:
+    """Verify for loops execute correctly."""
+    code = (
+        "for i in range(3):\n"
+        '    print("Python")'
+    )
+    res = run_student_code(code)
+    assert res.success is True
+    assert res.output.strip() == "Python\nPython\nPython"
+
+
+def test_sandbox_friendly_syntax_error() -> None:
+    """Syntax errors should return friendly beginner explanations."""
+    # Missing closing quotation mark
+    bad_code = 'print("Hello)'
+    res = run_student_code(bad_code)
+    assert res.success is False
+    assert res.friendly_explanation_en is not None
+    assert "quotation" in res.friendly_explanation_en.lower()
+
+
+def test_sandbox_forbids_dangerous_imports() -> None:
+    """Attempting to import modules must be intercepted safely."""
+    bad_code = "import os\nprint(os.getcwd())"
+    is_safe, err_en, err_am = check_code_safety(bad_code)
+    assert is_safe is False
+    assert "Importing" in err_en
+
+    res = run_student_code(bad_code)
+    assert res.success is False
+    assert "Importing" in res.error_message
+
+
+def test_sandbox_forbids_open_and_eval() -> None:
+    """Attempting to call open() or eval() must be blocked."""
+    bad_code = 'f = open("data.txt", "w")'
+    is_safe, err_en, _ = check_code_safety(bad_code)
+    assert is_safe is False
+    assert "open()" in err_en
+
+    res = run_student_code(bad_code)
+    assert res.success is False
+
+
+def test_challenges_content_and_bilingual_parity() -> None:
+    """Verify all challenges have complete English and Amharic descriptions."""
+    challenges = get_all_challenges()
+    assert len(challenges) >= 4
+    assert get_total_challenges_count() >= 4
+
+    for ch in challenges:
+        assert ch.get_title("en") != ""
+        assert ch.get_title("am") != ""
+        assert ch.get_prompt("en") != ""
+        assert ch.get_prompt("am") != ""
+        assert ch.get_hint("en") != ""
+        assert ch.get_hint("am") != ""
+        assert ch.expected_output != ""
+
+
+def test_challenge_solution_checker() -> None:
+    """Verify solution validation against expected output."""
+    ch1 = get_challenge("c1")
+    assert ch1 is not None
+
+    # Correct solution
+    assert ch1.check_solution("Hello, CodeBuddy!\n") is True
+    # Incorrect solution
+    assert ch1.check_solution("Hello\n") is False
+
+
+@pytest.mark.asyncio
+async def test_database_code_challenge_persistence(test_db: Database) -> None:
+    """Test saving and retrieving completed code writing challenges."""
+    user_id = 99123
+
+    # Initial state
+    completed = await test_db.get_completed_code_challenges(user_id)
+    assert len(completed) == 0
+
+    # Save completion
+    await test_db.record_code_challenge_completion(
+        user_id=user_id,
+        challenge_id="c1",
+        submitted_code='print("Hello, CodeBuddy!")',
+    )
+
+    completed_after = await test_db.get_completed_code_challenges(user_id)
+    assert "c1" in completed_after
+    assert len(completed_after) == 1
