@@ -11,7 +11,7 @@ from aiogram.types import Message, CallbackQuery
 
 from bot.database import Database
 from bot.strings import get_string, DEFAULT_LANGUAGE
-from bot.codelab.sandbox import run_student_code, preprocess_mobile_code
+from bot.codelab.sandbox import run_student_code, preprocess_mobile_code, outputs_match
 from bot.codelab.js_sandbox import run_student_js_code
 from bot.codelab.html_checker import run_student_html_code
 from bot.codelab.css_checker import run_student_css_code
@@ -547,7 +547,7 @@ async def handle_student_step_code(
     student_output = result.output.strip()
     if step.expected_code_output is not None:
         expected = step.expected_code_output.strip()
-        if student_output != expected:
+        if not outputs_match(student_output, expected):
             hint = step.get_hint(lang)
             if lang == "am":
                 response = (

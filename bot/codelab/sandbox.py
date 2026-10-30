@@ -132,15 +132,85 @@ def get_friendly_error(exc: Exception) -> Tuple[str, str]:
     )
 
 
+def strip_markdown_fences(code: str) -> str:
+    """Strips markdown code fences (```python ... ``` or `...`) from user input."""
+    text = code.strip()
+
+    # Strip triple backtick fences
+    if text.startswith("```"):
+        lines = text.splitlines()
+        if len(lines) >= 2 and lines[-1].strip() == "```":
+            return "\n".join(lines[1:-1]).strip()
+        elif text.endswith("```") and len(text) >= 6:
+            text = text[3:-3].strip()
+            first_word = text.split()[0].lower() if text.split() else ""
+            if first_word in ("python", "py", "javascript", "js", "html", "css", "sql", "bash", "c", "csharp", "java"):
+                text = text[len(first_word):].strip()
+            return text
+
+    # Strip inline backtick `code`
+    if text.startswith("`") and text.endswith("`") and len(text) >= 2:
+        return text[1:-1].strip()
+
+    return code
+
+
+def outputs_match(actual: str, expected: str) -> bool:
+    """Lenient comparison for student code output vs expected output.
+
+    Allows for:
+    - Trailing and leading whitespace/newlines differences
+    - Case insensitivity (e.g. 'hello' vs 'Hello')
+    - Quoted string output matching unquoted expected
+    - Trailing punctuation differences (. ! , : ;)
+    - Internal multi-whitespace normalization
+    """
+    if actual is None or expected is None:
+        return actual == expected
+
+    a = actual.strip()
+    e = expected.strip()
+    if a == e:
+        return True
+
+    # Strip enclosing quotes if student output was a string repr
+    if (a.startswith('"') and a.endswith('"')) or (a.startswith("'") and a.endswith("'")):
+        if a[1:-1].strip() == e:
+            return True
+        a_inner = a[1:-1].strip()
+    else:
+        a_inner = a
+
+    # Case-insensitive direct match
+    if a.lower() == e.lower() or a_inner.lower() == e.lower():
+        return True
+
+    # Normalize trailing punctuation (. ! , : ;) and whitespace
+    import re
+    clean_a = re.sub(r'[\s!.,:;]+$', '', a_inner.lower()).strip()
+    clean_e = re.sub(r'[\s!.,:;]+$', '', e.lower()).strip()
+    if clean_a == clean_e:
+        return True
+
+    # Normalize internal multi-space whitespace
+    clean_a = re.sub(r'\s+', ' ', clean_a)
+    clean_e = re.sub(r'\s+', ' ', clean_e)
+    return clean_a == clean_e
+
+
 def preprocess_mobile_code(code: str) -> str:
     """
     Cleans up common mobile phone keyboard issues for coding:
-    1. Normalizes mobile smart quotes (“ ” ‘ ’) and dashes (– —).
-    2. Allows semicolons (;) outside strings to represent new lines.
-    3. Auto-fixes missing indentation (gaps/spaces) when typing on phones.
+    1. Strips markdown fences if user copied formatted code.
+    2. Normalizes mobile smart quotes (“ ” ‘ ’) and dashes (– —).
+    3. Allows semicolons (;) outside strings to represent new lines.
+    4. Auto-fixes missing indentation (gaps/spaces) when typing on phones.
     """
     if not code or not code.strip():
         return code
+
+    # Strip markdown code blocks first
+    code = strip_markdown_fences(code)
 
     # 1. Normalize smart quotes and dashes from phone keyboards
     quote_map = {
@@ -234,6 +304,7 @@ def run_student_code(code_str: str) -> ExecutionResult:
     safe_globals = {
         "__builtins__": {
             "print": print,
+            "Print": print,
             "range": range,
             "len": len,
             "str": str,
@@ -258,6 +329,20 @@ def run_student_code(code_str: str) -> ExecutionResult:
         exec(compiled, safe_globals, local_scope)
         sys.stdout = old_stdout
         output = captured_stdout.getvalue()
+
+        # If stdout is empty, check if evaluating the last expression produces output
+        if not output.strip():
+            try:
+                tree = ast.parse(code_str)
+                if tree.body and isinstance(tree.body[-1], ast.Expr):
+                    last_expr = tree.body[-1].value
+                    eval_code = compile(ast.Expression(body=last_expr), "<student_code>", "eval")
+                    eval_val = eval(eval_code, safe_globals, local_scope)
+                    if eval_val is not None:
+                        output = str(eval_val)
+            except Exception:
+                pass
+
         return ExecutionResult(
             success=True,
             output=output,

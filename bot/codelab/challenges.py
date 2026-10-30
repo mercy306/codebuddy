@@ -3,6 +3,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, Optional
+from bot.codelab.sandbox import outputs_match
 
 
 @dataclass(frozen=True)
@@ -30,7 +31,7 @@ class CodingChallenge:
 
     def check_solution(self, stdout: str) -> bool:
         """Validate if the student's output matches expectations."""
-        return stdout.strip() == self.expected_output.strip()
+        return outputs_match(stdout, self.expected_output)
 
 
 CHALLENGES: List[CodingChallenge] = [

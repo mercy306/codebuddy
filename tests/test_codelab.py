@@ -98,8 +98,37 @@ def test_challenge_solution_checker() -> None:
 
     # Correct solution
     assert ch1.check_solution("Hello, CodeBuddy!\n") is True
+    # Lenient case and punctuation
+    assert ch1.check_solution("hello, codebuddy!") is True
+    assert ch1.check_solution("Hello, CodeBuddy") is True
     # Incorrect solution
-    assert ch1.check_solution("Hello\n") is False
+    assert ch1.check_solution("Goodbye\n") is False
+
+
+def test_sandbox_markdown_fences_and_mobile_features() -> None:
+    """Verify code inside markdown fences or with mobile quirks executes cleanly."""
+    res_fenced = run_student_code('```python\nprint("Hello")\n```')
+    assert res_fenced.success is True
+    assert res_fenced.output.strip() == "Hello"
+
+    res_inline = run_student_code('`print("Hello")`')
+    assert res_inline.success is True
+    assert res_inline.output.strip() == "Hello"
+
+    res_capital = run_student_code('Print("Hello")')
+    assert res_capital.success is True
+    assert res_capital.output.strip() == "Hello"
+
+
+def test_sandbox_bare_expressions() -> None:
+    """Verify bare strings and arithmetic produce visible output without print()."""
+    res_str = run_student_code('"Hello, CodeBuddy!"')
+    assert res_str.success is True
+    assert res_str.output.strip() == "Hello, CodeBuddy!"
+
+    res_math = run_student_code("25 * 4")
+    assert res_math.success is True
+    assert res_math.output.strip() == "100"
 
 
 @pytest.mark.asyncio
