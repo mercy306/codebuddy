@@ -131,6 +131,15 @@ def test_sandbox_bare_expressions() -> None:
     assert res_math.output.strip() == "100"
 
 
+def test_outputs_match_typo_leniency() -> None:
+    """Verify small single-letter typos are forgiven in outputs_match."""
+    from bot.codelab.sandbox import outputs_match
+    # Typo: 'Welcom' vs 'Welcome'
+    assert outputs_match("# Welcom to my website", "# Welcome to My Website") is True
+    # Pure numbers must not fuzzy match
+    assert outputs_match("10", "20") is False
+
+
 @pytest.mark.asyncio
 async def test_database_code_challenge_persistence(test_db: Database) -> None:
     """Test saving and retrieving completed code writing challenges."""

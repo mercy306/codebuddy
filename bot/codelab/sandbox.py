@@ -195,7 +195,21 @@ def outputs_match(actual: str, expected: str) -> bool:
     # Normalize internal multi-space whitespace
     clean_a = re.sub(r'\s+', ' ', clean_a)
     clean_e = re.sub(r'\s+', ' ', clean_e)
-    return clean_a == clean_e
+    if clean_a == clean_e:
+        return True
+
+    # For pure numeric answers, do not fuzzy match (numbers must be exact)
+    if clean_a.isdigit() and clean_e.isdigit():
+        return False
+
+    # Lenient fuzzy matching for human typos in words/sentences (e.g. 'welcom' vs 'welcome')
+    if len(clean_e) >= 4:
+        import difflib
+        ratio = difflib.SequenceMatcher(None, clean_a, clean_e).ratio()
+        if abs(len(clean_a) - len(clean_e)) <= 2 and ratio >= 0.85:
+            return True
+
+    return False
 
 
 def preprocess_mobile_code(code: str) -> str:
