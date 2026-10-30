@@ -1,0 +1,11 @@
+services:
+  - type: worker
+    name: codebuddy-bot
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m bot.main
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: DATABASE_PATH
+        value: data/codebuddy.db
