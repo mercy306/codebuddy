@@ -6,6 +6,7 @@ import asyncio
 import logging
 import sys
 
+import os
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
@@ -23,6 +24,25 @@ def configure_logging(level_name: str) -> None:
         format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
         handlers=[logging.StreamHandler(sys.stdout)],
     )
+
+
+async def start_dummy_healthcheck_server():
+    """Starts a minimal HTTP server so Render free tier health-checks succeed."""
+    port = int(os.getenv("PORT", "10000"))
+    async def handle_client(reader, writer):
+        await reader.read(1024)
+        response = b"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 2\r\n\r\nOK"
+        writer.write(response)
+        await writer.drain()
+        writer.close()
+        await writer.wait_closed()
+    try:
+        server = await asyncio.start_server(handle_client, "0.0.0.0", port)
+        logging.getLogger("codebuddy").info("Healthcheck HTTP server listening on port %s", port)
+        return server
+    except Exception as e:
+        logging.getLogger("codebuddy").warning("Could not start healthcheck server: %s", e)
+        return None
 
 
 async def main() -> None:
@@ -43,6 +63,9 @@ async def main() -> None:
     # 3. Initialize SQLite database
     db = Database(config.database_path)
     await db.init_db()
+
+    # Start healthcheck HTTP server for Render free tier
+    await start_dummy_healthcheck_server()
 
     # 4. Initialize Bot and Dispatcher
     bot = Bot(
