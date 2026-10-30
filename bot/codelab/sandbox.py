@@ -104,6 +104,11 @@ def get_friendly_error(exc: Exception) -> Tuple[str, str]:
             "Check your spelling, quotes, and parentheses.",
             "ፊደላትን፣ የጥቅስ ምልክቶችን እና ቅንፎችን በትክክል መጻፍዎን ያረጋግጡ።",
         )
+    if isinstance(exc, IndentationError):
+        return (
+            "Indentation error: The line inside your loop or block needs to be indented with spaces.",
+            "የመስመር ክፍተት (Indentation) ስህተት፦ በloop ወይም በኮድ ብሎክ ውስጥ ያለው መስመር ክፍተት ያስፈልገዋል።",
+        )
     if isinstance(exc, NameError):
         name = getattr(exc, "name", "variable")
         return (
@@ -127,8 +132,92 @@ def get_friendly_error(exc: Exception) -> Tuple[str, str]:
     )
 
 
+def preprocess_mobile_code(code: str) -> str:
+    """
+    Cleans up common mobile phone keyboard issues for coding:
+    1. Normalizes mobile smart quotes (“ ” ‘ ’) and dashes (– —).
+    2. Allows semicolons (;) outside strings to represent new lines.
+    3. Auto-fixes missing indentation (gaps/spaces) when typing on phones.
+    """
+    if not code or not code.strip():
+        return code
+
+    # 1. Normalize smart quotes and dashes from phone keyboards
+    quote_map = {
+        '“': '"', '”': '"', '„': '"', '»': '"', '«': '"',
+        '‘': "'", '’': "'", '`': "'",
+        '—': '-', '–': '-'
+    }
+    cleaned = []
+    for ch in code:
+        cleaned.append(quote_map.get(ch, ch))
+    code = "".join(cleaned)
+
+    # 2. Split lines by semicolon if semicolon is outside strings
+    lines = []
+    for raw_line in code.splitlines():
+        parts = []
+        cur = []
+        in_double = False
+        in_single = False
+        for ch in raw_line:
+            if ch == '"' and not in_single:
+                in_double = not in_double
+            elif ch == "'" and not in_double:
+                in_single = not in_single
+            
+            if ch == ';' and not in_double and not in_single:
+                part = ''.join(cur).strip()
+                if part:
+                    parts.append(part)
+                cur = []
+            else:
+                cur.append(ch)
+        final_part = ''.join(cur).strip()
+        if final_part:
+            parts.append(final_part)
+
+        for p in parts:
+            if p:
+                lines.append(p)
+
+    if not lines:
+        return code
+
+    # 3. Auto-indentation for block statements (for, if, def, while, etc.)
+    fixed_lines = []
+    indent_level = 0
+
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            continue
+
+        # If user typed 'else:', 'elif', 'except', 'finally:', dedent one level
+        if stripped.startswith(('else:', 'elif ', 'except', 'finally:')):
+            if indent_level > 0:
+                indent_level -= 1
+
+        leading_spaces = len(line) - len(line.lstrip())
+
+        # If user is inside a block but typed 0 indentation on phone, auto-indent it!
+        if leading_spaces == 0 and indent_level > 0:
+            fixed_lines.append('    ' * indent_level + stripped)
+        else:
+            fixed_lines.append(line)
+
+        # If line ends with a colon :, the next line should be indented!
+        if stripped.endswith(':'):
+            indent_level += 1
+
+    return '\n'.join(fixed_lines)
+
+
 def run_student_code(code_str: str) -> ExecutionResult:
     """Safely execute Python code and capture standard output."""
+    # Preprocess mobile phone keyboard code (smart quotes, semicolons, missing indents)
+    code_str = preprocess_mobile_code(code_str)
+
     # 1. Safety verification
     is_safe, err_en, err_am = check_code_safety(code_str)
     if not is_safe:

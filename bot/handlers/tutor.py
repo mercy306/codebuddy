@@ -11,7 +11,7 @@ from aiogram.types import Message, CallbackQuery
 
 from bot.database import Database
 from bot.strings import get_string, DEFAULT_LANGUAGE
-from bot.codelab.sandbox import run_student_code
+from bot.codelab.sandbox import run_student_code, preprocess_mobile_code
 from bot.codelab.js_sandbox import run_student_js_code
 from bot.codelab.html_checker import run_student_html_code
 from bot.codelab.css_checker import run_student_css_code
@@ -434,7 +434,7 @@ async def handle_student_step_code(
     message: Message, db: Database, state: FSMContext
 ) -> None:
     """Handle code typed by student in response to a tutor CODE_PROMPT step."""
-    code_text = message.text or ""
+    code_text = preprocess_mobile_code(message.text or "")
 
     # Check for cancellation or standard navigation commands
     if code_text.strip().startswith("/"):
