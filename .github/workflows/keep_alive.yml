@@ -1,0 +1,25 @@
+name: Keep CodeBuddy Alive (Render Free Tier 24/7)
+
+on:
+  schedule:
+    # Run every 10 minutes so Render never spins down from 15-min inactivity
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+    # Allows manual trigger anytime from GitHub Actions tab
+
+jobs:
+  ping-render:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping CodeBuddy Render Service
+        run: |
+          echo "Pinging CodeBuddy at $(date -u)"
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 https://codebuddy-4y1x.onrender.com)
+          echo "HTTP Response Code: $RESPONSE"
+          if [ "$RESPONSE" = "200" ]; then
+            echo "Render service is awake and healthy!"
+          else
+            echo "Initial ping returned $RESPONSE, retrying once to ensure wake up..."
+            sleep 10
+            curl -s -f --max-time 60 https://codebuddy-4y1x.onrender.com
+          fi
