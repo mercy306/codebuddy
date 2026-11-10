@@ -24,7 +24,11 @@ def get_main_menu_keyboard(lang: str = DEFAULT_LANGUAGE) -> ReplyKeyboardMarkup:
         [btn_practice, btn_progress],
         [btn_settings],
     ]
-    return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
+    return ReplyKeyboardMarkup(
+        keyboard=keyboard,
+        resize_keyboard=True,
+        is_persistent=True,
+    )
 
 
 def get_onboarding_keyboard(lang: str = DEFAULT_LANGUAGE) -> InlineKeyboardMarkup:

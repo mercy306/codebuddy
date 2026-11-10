@@ -16,10 +16,10 @@ def register_handlers(dp: Dispatcher) -> None:
     """Register all routers in priority order."""
     dp.include_router(start_router)
     dp.include_router(help_router)
+    dp.include_router(menu_router)
     dp.include_router(learn_router)
     dp.include_router(practice_router)
     dp.include_router(codelab_router)
     dp.include_router(tutor_router)
-    dp.include_router(menu_router)
     # Fallback router must always be last
     dp.include_router(fallback_router)
