@@ -37,6 +37,14 @@ STRINGS: Dict[str, Dict[str, str]] = {
         LANG_EN: "What would you like to explore today? Choose an option below:",
         LANG_AM: "ዛሬ ምን ማሰስ ይፈልጋሉ? ከዚህ በታች ካሉት አንዱን ይምረጡ፦",
     },
+    "btn_tutor": {
+        LANG_EN: "🧑‍🏫 Tutor",
+        LANG_AM: "🧑‍🏫 አስተማሪ",
+    },
+    "btn_menu": {
+        LANG_EN: "🏠 Main Menu",
+        LANG_AM: "🏠 ዋና ማውጫ",
+    },
     "btn_learn": {
         LANG_EN: "📚 Learn",
         LANG_AM: "📚 ተማር",

@@ -13,14 +13,16 @@ from bot.strings import get_string, DEFAULT_LANGUAGE
 
 def get_main_menu_keyboard(lang: str = DEFAULT_LANGUAGE) -> ReplyKeyboardMarkup:
     """Build reply keyboard for main menu navigation."""
+    btn_tutor = KeyboardButton(text=get_string("btn_tutor", lang))
     btn_learn = KeyboardButton(text=get_string("btn_learn", lang))
     btn_practice = KeyboardButton(text=get_string("btn_practice", lang))
     btn_progress = KeyboardButton(text=get_string("btn_progress", lang))
     btn_settings = KeyboardButton(text=get_string("btn_settings", lang))
 
     keyboard = [
-        [btn_learn, btn_practice],
-        [btn_progress, btn_settings],
+        [btn_tutor, btn_learn],
+        [btn_practice, btn_progress],
+        [btn_settings],
     ]
     return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
 

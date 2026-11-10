@@ -22,6 +22,7 @@ from bot.keyboards import (
     get_challenge_view_keyboard,
     get_challenge_result_keyboard,
     get_challenge_list_keyboard,
+    get_main_menu_keyboard,
 )
 
 logger = logging.getLogger(__name__)
@@ -200,6 +201,25 @@ async def handle_student_code_submission(
         return
 
     student_code = message.text or ""
+
+    # Check for cancellation or standard navigation commands / menu button presses
+    raw_lower = student_code.strip().lower()
+    nav_commands = {
+        "/cancel", "/exit", "/menu", "/start", "/help", "/tutor", "/learn", "/practice", "/settings",
+        "menu", "main menu", "🏠 main menu", "cancel", "exit", "quit", "back",
+        "tutor", "🧑‍🏫 tutor", "🧑‍🏫 አስተማሪ", "learn", "📚 learn", "📚 ተማር",
+        "practice", "💻 practice", "💻 ልምምድ", "settings", "⚙️ settings", "⚙️ ቅንብሮች",
+        "progress", "📊 my progress", "📊 የእኔ እድገት", "ዋና ማውጫ", "ማውጫ", "ተመለስ"
+    }
+    if raw_lower.startswith("/") or raw_lower in nav_commands:
+        await state.clear()
+        exit_msg = (
+            "👋 CodeLab paused. Returning to main menu."
+            if lang == "en"
+            else "👋 ኮድላብ ቆሟል። ወደ ዋናው ማውጫ ተመልሰዋል።"
+        )
+        await message.answer(exit_msg, reply_markup=get_main_menu_keyboard(lang))
+        return
 
     # Execute safely in sandbox
     result = run_student_code(student_code)

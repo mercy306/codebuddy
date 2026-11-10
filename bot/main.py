@@ -10,6 +10,7 @@ import os
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
+from aiogram.types import BotCommand
 
 from bot.config import Config
 from bot.database import Database
@@ -79,6 +80,22 @@ async def main() -> None:
 
     # 5. Register routers
     register_handlers(dp)
+
+    # 6. Configure Telegram native menu commands
+    try:
+        commands = [
+            BotCommand(command="menu", description="🏠 Main Menu / ዋና ማውጫ"),
+            BotCommand(command="tutor", description="🧑‍🏫 Interactive Tutor / የግል አስተማሪ"),
+            BotCommand(command="learn", description="📚 Lessons & Curriculum / ትምህርቶች"),
+            BotCommand(command="practice", description="💻 Practice Arena / ልምምድ"),
+            BotCommand(command="codelab", description="🔬 CodeLab Sandbox / ኮድ መጻፊያ"),
+            BotCommand(command="settings", description="⚙️ Language & Settings / ቅንብሮች"),
+            BotCommand(command="help", description="ℹ️ Help & Commands / እገዛ"),
+        ]
+        await bot.set_my_commands(commands)
+        logger.info("Telegram command menu registered successfully.")
+    except Exception as cmd_err:
+        logger.warning("Could not set Telegram commands: %s", cmd_err)
 
     logger.info("Routers registered. Starting long polling...")
 

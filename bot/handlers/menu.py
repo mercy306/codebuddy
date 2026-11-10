@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from aiogram import Router, F
 from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from bot.database import Database
@@ -22,15 +23,19 @@ logger = logging.getLogger(__name__)
 router = Router(name="menu_router")
 
 # Collect text variations for menu buttons across all supported languages
-LEARN_BUTTON_TEXTS = {STRINGS["btn_learn"][lang] for lang in STRINGS["btn_learn"]}
-PRACTICE_BUTTON_TEXTS = {STRINGS["btn_practice"][lang] for lang in STRINGS["btn_practice"]}
-PROGRESS_BUTTON_TEXTS = {STRINGS["btn_progress"][lang] for lang in STRINGS["btn_progress"]}
-SETTINGS_BUTTON_TEXTS = {STRINGS["btn_settings"][lang] for lang in STRINGS["btn_settings"]}
+TUTOR_BUTTON_TEXTS = {STRINGS.get("btn_tutor", {}).get(lang, "🧑‍🏫 Tutor") for lang in ("en", "am")} | {"tutor", "Tutor", "🧑‍🏫 Tutor", "🧑‍🏫 አስተማሪ"}
+LEARN_BUTTON_TEXTS = {STRINGS["btn_learn"][lang] for lang in STRINGS["btn_learn"]} | {"learn", "Learn"}
+PRACTICE_BUTTON_TEXTS = {STRINGS["btn_practice"][lang] for lang in STRINGS["btn_practice"]} | {"practice", "Practice"}
+PROGRESS_BUTTON_TEXTS = {STRINGS["btn_progress"][lang] for lang in STRINGS["btn_progress"]} | {"progress", "Progress"}
+SETTINGS_BUTTON_TEXTS = {STRINGS["btn_settings"][lang] for lang in STRINGS["btn_settings"]} | {"settings", "Settings"}
+MENU_TRIGGER_TEXTS = {"menu", "Menu", "main menu", "Main Menu", "🏠 Main Menu", "ዋና ማውጫ", "ማውጫ", "🏠 ዋና ማውጫ"}
 
 
 @router.message(Command("menu"))
-async def handle_menu_command(message: Message, db: Database) -> None:
-    """Handle /menu command to redisplay the main navigation menu."""
+@router.message(F.text.in_(MENU_TRIGGER_TEXTS))
+async def handle_menu_command(message: Message, db: Database, state: FSMContext) -> None:
+    """Handle /menu command or Menu button to clear state and redisplay navigation menu."""
+    await state.clear()
     user = message.from_user
     user_id = user.id if user else 0
     lang = await db.get_user_language(user_id) if user_id else DEFAULT_LANGUAGE
@@ -42,6 +47,14 @@ async def handle_menu_command(message: Message, db: Database) -> None:
         text=title,
         reply_markup=keyboard,
     )
+
+
+@router.message(F.text.in_(TUTOR_BUTTON_TEXTS))
+async def handle_tutor_button(message: Message, db: Database, state: FSMContext) -> None:
+    """Handle Tutor button by redirecting to interactive conversational tutor."""
+    from bot.handlers.tutor import handle_tutor_menu
+    await state.clear()
+    await handle_tutor_menu(message, db, state)
 
 
 @router.message(Command("settings"))

@@ -436,21 +436,32 @@ async def handle_student_step_code(
     """Handle code typed by student in response to a tutor CODE_PROMPT step."""
     code_text = preprocess_mobile_code(message.text or "")
 
-    # Check for cancellation or standard navigation commands
-    if code_text.strip().startswith("/"):
-        cmd = code_text.strip().split()[0].lower()
-        if cmd in ("/cancel", "/exit", "/menu", "/start", "/help", "/tutor"):
-            await state.clear()
-            user = message.from_user
-            user_id = user.id if user else 0
-            lang = await db.get_user_language(user_id) if user_id else DEFAULT_LANGUAGE
-            exit_msg = (
-                "👋 Tutor paused. Returning to main menu."
-                if lang == "en"
-                else "👋 አስተማሪው ቆሟል። ወደ ዋናው ማውጫ ተመልሰዋል።"
-            )
-            await message.answer(exit_msg, reply_markup=get_main_menu_keyboard(lang))
+    # Check for cancellation or standard navigation commands / menu button presses
+    raw_lower = (message.text or "").strip().lower()
+    nav_commands = {
+        "/cancel", "/exit", "/menu", "/start", "/help", "/tutor", "/learn", "/practice", "/settings",
+        "menu", "main menu", "🏠 main menu", "cancel", "exit", "quit", "back",
+        "tutor", "🧑‍🏫 tutor", "🧑‍🏫 አስተማሪ", "learn", "📚 learn", "📚 ተማር",
+        "practice", "💻 practice", "💻 ልምምድ", "settings", "⚙️ settings", "⚙️ ቅንብሮች",
+        "progress", "📊 my progress", "📊 የእኔ እድገት", "ዋና ማውጫ", "ማውጫ", "ተመለስ"
+    }
+    if raw_lower.startswith("/") or raw_lower in nav_commands:
+        await state.clear()
+        user = message.from_user
+        user_id = user.id if user else 0
+        lang = await db.get_user_language(user_id) if user_id else DEFAULT_LANGUAGE
+
+        if raw_lower in ("/tutor", "tutor", "🧑‍🏫 tutor", "🧑‍🏫 አስተማሪ"):
+            await handle_tutor_menu(message, db, state)
             return
+
+        exit_msg = (
+            "👋 Tutor paused. Returning to main menu."
+            if lang == "en"
+            else "👋 አስተማሪው ቆሟል። ወደ ዋናው ማውጫ ተመልሰዋል።"
+        )
+        await message.answer(exit_msg, reply_markup=get_main_menu_keyboard(lang))
+        return
 
     user = message.from_user
     user_id = user.id if user else 0
