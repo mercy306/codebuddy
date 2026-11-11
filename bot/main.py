@@ -103,7 +103,7 @@ def main() -> None:
             logger.info("Setting Telegram Webhook to %s ...", webhook_full_url)
             await bot.set_webhook(
                 url=webhook_full_url,
-                drop_pending_updates=True,
+                drop_pending_updates=False,
                 allowed_updates=["message", "callback_query"],
             )
             await setup_bot_commands(bot)
@@ -140,7 +140,7 @@ def main() -> None:
                 retry_delay = 3
                 while True:
                     try:
-                        await bot.delete_webhook(drop_pending_updates=True)
+                        await bot.delete_webhook(drop_pending_updates=False)
                         await dp.start_polling(bot)
                         break
                     except (KeyboardInterrupt, SystemExit):
