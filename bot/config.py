@@ -18,6 +18,8 @@ class Config:
     bot_token: str
     database_path: Path
     log_level: str
+    webhook_url: str = ""
+    port: int = 10000
 
     @classmethod
     def load(cls) -> Config:
@@ -33,10 +35,19 @@ class Config:
 
         log_level = os.getenv("LOG_LEVEL", "INFO").strip().upper()
 
+        # Webhook detection: on Render, RENDER_EXTERNAL_URL or RENDER or PORT is present
+        webhook = os.getenv("WEBHOOK_URL") or os.getenv("RENDER_EXTERNAL_URL")
+        if not webhook and (os.getenv("RENDER") or os.getenv("PORT")):
+            webhook = "https://codebuddy-4y1x.onrender.com"
+
+        port = int(os.getenv("PORT", "10000"))
+
         return cls(
             bot_token=token,
             database_path=db_path,
             log_level=log_level,
+            webhook_url=(webhook or "").strip(),
+            port=port,
         )
 
     @property
